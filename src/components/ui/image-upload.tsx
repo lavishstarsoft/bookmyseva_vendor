@@ -1,0 +1,478 @@
+"use client"
+
+import { useState, useCallback } from "react"
+import { Upload, Loader2, ImagePlus, X, Crop as CropIcon, Save } from "lucide-react"
+import { toast } from "sonner"
+import api from "@/lib/axios"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import Cropper from 'react-easy-crop'
+import getCroppedImg from "@/lib/cropImage"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog"
+import { Slider } from "@/components/ui/slider"
+import { Label } from "@/components/ui/label"
+
+interface ImageUploadProps {
+    value?: string
+    onChange: (url: string) => void
+    disabled?: boolean
+    className?: string
+    aspectRatio?: number // If provided, enables cropping
+}
+
+export const ImageUpload = ({
+    value,
+    onChange,
+    disabled,
+    className,
+    aspectRatio
+}: ImageUploadProps) => {
+    const [isUploading, setIsUploading] = useState(false)
+
+    // Cropper State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [crop, setCrop] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+    const [isCropping, setIsCropping] = useState(false)
+    const [isUploadingCrop, setIsUploadingCrop] = useState(false)
+
+    const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // If aspectRatio is provided, open cropper
+        if (aspectRatio) {
+            const objectUrl = URL.createObjectURL(file)
+            setCropImageSrc(objectUrl)
+            setIsCropping(true)
+            setZoom(1)
+            setCrop({ x: 0, y: 0 })
+
+            e.target.value = '' // Reset input
+            return
+        }
+
+        // Direct Upload (No Crop)
+        setIsUploading(true)
+        const formData = new FormData()
+        formData.append("file", file)
+
+        try {
+            const response = await api.post(`/vendor-auth/upload`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                }
+            })
+
+            onChange(response.data.url)
+            toast.success("Image uploaded successfully")
+        } catch {
+            toast.error("Something went wrong with the upload")
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels)
+    }, [])
+
+    const onUploadCroppedImage = async () => {
+        if (!cropImageSrc || !croppedAreaPixels) return
+
+        setIsUploadingCrop(true)
+        try {
+            const croppedImageBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
+            if (!croppedImageBlob) throw new Error("Could not create crop blob")
+
+            const formData = new FormData()
+            const file = new File([croppedImageBlob], `crop-${Date.now()}.jpg`, { type: "image/jpeg" })
+            formData.append("file", file)
+
+            const uploadResponse = await api.post("/vendor-auth/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            })
+
+            onChange(uploadResponse.data.url)
+            setIsCropping(false)
+            setCropImageSrc(null)
+            toast.success("Image cropped & uploaded")
+
+        } catch {
+            toast.error("Failed to upload cropped image")
+        } finally {
+            setIsUploadingCrop(false)
+        }
+    }
+
+    return (
+        <div className={className}>
+            <div className="flex items-center justify-center w-full h-full relative overflow-hidden rounded-lg">
+                {value ? (
+                    <>
+                        <div className="volume-off absolute top-2 right-2 z-10">
+                            <Button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    onChange("");
+                                }}
+                                variant="destructive"
+                                size="icon"
+                                className="h-6 w-6 rounded-full opacity-80 hover:opacity-100"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Image
+                            fill
+                            style={{ objectFit: "contain" }}
+                            alt="Upload"
+                            src={value}
+                            className="w-full h-full"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                    </>
+                ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50/50">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {isUploading ? (
+                                <Loader2 className="w-8 h-8 mb-4 text-gray-500 animate-spin" />
+                            ) : (
+                                <Upload className="w-6 h-6 mb-2 text-gray-500" />
+                            )}
+                            <p className="text-xs text-gray-500 font-semibold">Click to upload</p>
+                        </div>
+                        <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={onUpload}
+                            disabled={disabled || isUploading}
+                        />
+                    </label>
+                )}
+            </div>
+            {/* Cropper Modal */}
+            <Dialog open={isCropping} onOpenChange={setIsCropping}>
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-zinc-900 border-zinc-800 text-white z-[200]">
+                    <DialogHeader className="p-4 border-b border-zinc-800">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <CropIcon className="h-5 w-5" />
+                            Crop Image
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Adjust the image to fit the aspect ratio.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="relative w-full h-[400px] bg-black">
+                        {cropImageSrc && (
+                            <Cropper
+                                image={cropImageSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={aspectRatio || 1}
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                            />
+                        )}
+                    </div>
+
+                    <div className="p-4 bg-zinc-900 border-t border-zinc-800 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <Label className="w-16 text-zinc-300">Zoom</Label>
+                            <Slider
+                                value={[zoom]}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                onValueChange={(vals: number[]) => setZoom(vals[0])}
+                                className="flex-1"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button variant="outline" type="button" onClick={() => setIsCropping(false)} className="border-zinc-700 bg-transparent text-white hover:bg-zinc-800 hover:text-white">
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={onUploadCroppedImage}
+                                disabled={isUploadingCrop}
+                                className="bg-[#8D0303] hover:bg-[#720202] text-white"
+                            >
+                                {isUploadingCrop ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Save & Upload
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    )
+}
+
+// ─── Multi-Image Upload ───────────────────────────────────────────────────────
+
+interface MultiImageUploadProps {
+    values: string[]
+    onChange: (urls: string[]) => void
+    maxImages?: number
+    aspectRatio?: number
+    disabled?: boolean
+    className?: string
+}
+
+export const MultiImageUpload = ({
+    values,
+    onChange,
+    maxImages = 5,
+    aspectRatio,
+    disabled,
+    className
+}: MultiImageUploadProps) => {
+    const [isUploading, setIsUploading] = useState(false)
+
+    // Cropper State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [crop, setCrop] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+    const [isCropping, setIsCropping] = useState(false)
+    const [isUploadingCrop, setIsUploadingCrop] = useState(false)
+
+    const canAddMore = values.length < maxImages
+
+    const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (aspectRatio) {
+            const objectUrl = URL.createObjectURL(file)
+            setCropImageSrc(objectUrl)
+            setIsCropping(true)
+            setZoom(1)
+            setCrop({ x: 0, y: 0 })
+            e.target.value = ''
+            return
+        }
+
+        setIsUploading(true)
+        const formData = new FormData()
+        formData.append("file", file)
+
+        try {
+            const response = await api.post(`/vendor-auth/upload`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            })
+            onChange([...values, response.data.url])
+            toast.success("Image uploaded successfully")
+        } catch {
+            toast.error("Something went wrong with the upload")
+        } finally {
+            setIsUploading(false)
+            e.target.value = ''
+        }
+    }
+
+    const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels)
+    }, [])
+
+    const onUploadCroppedImage = async () => {
+        if (!cropImageSrc || !croppedAreaPixels) return
+
+        setIsUploadingCrop(true)
+        try {
+            const croppedImageBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
+            if (!croppedImageBlob) throw new Error("Could not create crop blob")
+
+            const formData = new FormData()
+            const file = new File([croppedImageBlob], `crop-${Date.now()}.jpg`, { type: "image/jpeg" })
+            formData.append("file", file)
+
+            const uploadResponse = await api.post("/vendor-auth/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            })
+
+            onChange([...values, uploadResponse.data.url])
+            setIsCropping(false)
+            setCropImageSrc(null)
+            toast.success("Image cropped & uploaded")
+        } catch {
+            toast.error("Failed to upload cropped image")
+        } finally {
+            setIsUploadingCrop(false)
+        }
+    }
+
+    const removeImage = (index: number) => {
+        onChange(values.filter((_, i) => i !== index))
+    }
+
+    const moveImage = (from: number, to: number) => {
+        if (to < 0 || to >= values.length) return
+        const updated = [...values]
+        const [moved] = updated.splice(from, 1)
+        updated.splice(to, 0, moved)
+        onChange(updated)
+    }
+
+    return (
+        <div className={className}>
+            <div className="grid grid-cols-2 gap-3">
+                {values.map((url, index) => (
+                    <div key={url + index} className={`relative aspect-square rounded-lg overflow-hidden border-2 ${index === 0 ? 'border-[#8D0303]/40 ring-2 ring-[#8D0303]/10' : 'border-border'}`}>
+                        <Image
+                            fill
+                            style={{ objectFit: "contain" }}
+                            alt={`Kit image ${index + 1}`}
+                            src={url}
+                            className="bg-gray-50"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                        {index === 0 && (
+                            <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-[#8D0303] text-white px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                Cover
+                            </span>
+                        )}
+                        <div className="absolute top-1.5 right-1.5 flex gap-1">
+                            {index > 0 && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full opacity-80 hover:opacity-100 bg-white/90 hover:bg-white shadow-sm"
+                                    onClick={() => moveImage(index, index - 1)}
+                                    title="Move left"
+                                >
+                                    <span className="text-xs">&#8592;</span>
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="h-6 w-6 rounded-full opacity-80 hover:opacity-100"
+                                onClick={() => removeImage(index)}
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+
+                {canAddMore && (
+                    <label className="flex flex-col items-center justify-center aspect-square cursor-pointer hover:bg-gray-100 transition-colors bg-gray-50/80 rounded-lg border-2 border-dashed border-border hover:border-[#8D0303]/30">
+                        <div className="flex flex-col items-center justify-center">
+                            {isUploading ? (
+                                <Loader2 className="w-6 h-6 mb-1.5 text-gray-400 animate-spin" />
+                            ) : (
+                                <ImagePlus className="w-6 h-6 mb-1.5 text-gray-400" />
+                            )}
+                            <p className="text-[10px] text-gray-500 font-semibold">Add Image</p>
+                            <p className="text-[9px] text-gray-400">{values.length}/{maxImages}</p>
+                        </div>
+                        <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={onUpload}
+                            disabled={disabled || isUploading}
+                        />
+                    </label>
+                )}
+            </div>
+
+            {values.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                    Upload up to {maxImages} images. The first image will be the cover.
+                </p>
+            )}
+
+            {/* Cropper Modal */}
+            <Dialog open={isCropping} onOpenChange={setIsCropping}>
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-zinc-900 border-zinc-800 text-white z-[200]">
+                    <DialogHeader className="p-4 border-b border-zinc-800">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <CropIcon className="h-5 w-5" />
+                            Crop Image
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Adjust the image to fit the aspect ratio.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="relative w-full h-[400px] bg-black">
+                        {cropImageSrc && (
+                            <Cropper
+                                image={cropImageSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={aspectRatio || 1}
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                            />
+                        )}
+                    </div>
+
+                    <div className="p-4 bg-zinc-900 border-t border-zinc-800 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <Label className="w-16 text-zinc-300">Zoom</Label>
+                            <Slider
+                                value={[zoom]}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                onValueChange={(vals: number[]) => setZoom(vals[0])}
+                                className="flex-1"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button variant="outline" type="button" onClick={() => setIsCropping(false)} className="border-zinc-700 bg-transparent text-white hover:bg-zinc-800 hover:text-white">
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={onUploadCroppedImage}
+                                disabled={isUploadingCrop}
+                                className="bg-[#8D0303] hover:bg-[#720202] text-white"
+                            >
+                                {isUploadingCrop ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Save & Upload
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    )
+}
