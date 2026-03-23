@@ -6,8 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/axios";
 import Link from "next/link";
-import { Search, Loader2, ShoppingCart, Check, X, Package, Truck } from "lucide-react";
+import { Search, Loader2, ShoppingCart, Check, X, Package, Truck, IndianRupee, Percent, TrendingUp, Printer } from "lucide-react";
 import { toast } from "sonner";
+import ShippingLabel from "./ShippingLabel";
+
+interface OrderCommission {
+    type: string;
+    value: number;
+    amount: number;
+}
 
 interface Order {
     _id: string;
@@ -18,9 +25,19 @@ interface Order {
     vendorStatus: string;
     status: string;
     createdAt: string;
+    deliverySlot?: string;
+    deliveryAddress?: {
+        line1: string;
+        city: string;
+        state: string;
+        pincode: string;
+    };
+    quantity: number;
+    commission?: OrderCommission;
+    vendorEarnings?: number;
 }
 
-const STATUS_TABS = ["all", "pending", "accepted", "packed", "shipped"] as const;
+const STATUS_TABS = ["all", "pending", "accepted", "packed", "shipped", "delivered"] as const;
 
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -28,13 +45,36 @@ export default function OrdersPage() {
     const [search, setSearch] = useState("");
     const [tab, setTab] = useState<string>("all");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    
+    // Vendor profile for shipping label
+    const [vendorProfile, setVendorProfile] = useState<{name: string, address: string, phone: string} | null>(null);
+    const [labelOrder, setLabelOrder] = useState<Order | null>(null);
+
+    // Fetch vendor profile once
+    useEffect(() => {
+        api.get("/vendor-auth/profile").then(res => {
+            const v = res.data.vendor;
+            setVendorProfile({
+                name: `${v.firstName} ${v.surname}`,
+                address: `${v.fullAddress}, ${v.state} - ${v.pincode}`,
+                phone: v.phone
+            });
+        }).catch(() => console.error("Failed to load vendor profile"));
+    }, []);
 
     const fetchOrders = async () => {
         try {
             setLoading(true);
             const params: Record<string, string> = {};
             if (search) params.search = search;
-            if (tab !== "all") params.vendorStatus = tab;
+            
+            if (tab === "delivered") {
+                // For delivered, we filter by the main order status, not vendorStatus
+                params.status = "delivered";
+            } else if (tab !== "all") {
+                params.vendorStatus = tab;
+            }
+            
             const res = await api.get("/vendor/orders", { params });
             setOrders(res.data.orders || []);
         } catch {
@@ -124,12 +164,39 @@ export default function OrdersPage() {
                                         <p className="text-xs text-muted-foreground mt-0.5">{order.user?.name} &bull; {new Date(order.createdAt).toLocaleDateString()}</p>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold">₹{order.totalAmount}</div>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${getStatusColor(order.vendorStatus)}`}>
-                                            {order.vendorStatus}
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${getStatusColor(order.status === 'delivered' ? 'delivered' : order.vendorStatus)}`}>
+                                            {order.status === 'delivered' ? 'Delivered' : order.vendorStatus}
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* Earnings Breakdown */}
+                                <div className="bg-muted/30 rounded-lg p-3 mb-3 space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-1">
+                                            <IndianRupee className="w-3 h-3" /> Order Amount
+                                        </span>
+                                        <span className="font-bold">₹{order.totalAmount?.toLocaleString()}</span>
+                                    </div>
+                                    {order.commission && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground flex items-center gap-1">
+                                                <Percent className="w-3 h-3" /> Platform Fee
+                                                <span className="text-[10px]">
+                                                    ({order.commission.type === 'percentage' ? `${order.commission.value}%` : 'Fixed'})
+                                                </span>
+                                            </span>
+                                            <span className="font-semibold text-red-600">- ₹{order.commission.amount?.toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-border pt-2 flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-1 font-semibold">
+                                            <TrendingUp className="w-3 h-3 text-green-600" /> Your Earnings
+                                        </span>
+                                        <span className="font-black text-green-600 text-base">₹{order.vendorEarnings?.toLocaleString() || order.totalAmount?.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
                                 <div className="flex gap-2">
                                     {order.vendorStatus === "pending" && (
                                         <>
@@ -142,22 +209,41 @@ export default function OrdersPage() {
                                         </>
                                     )}
                                     {order.vendorStatus === "accepted" && (
-                                        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleAction(order._id, "pack")} disabled={actionLoading === order._id}>
-                                            <Package className="w-3 h-3 mr-1" /> Mark Packed
-                                        </Button>
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => setLabelOrder(order)}>
+                                                <Printer className="w-3 h-3 mr-1" /> Label
+                                            </Button>
+                                            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleAction(order._id, "pack")} disabled={actionLoading === order._id}>
+                                                <Package className="w-3 h-3 mr-1" /> Mark Packed
+                                            </Button>
+                                        </>
                                     )}
                                     {order.vendorStatus === "packed" && (
-                                        <Link href={`/dashboard/orders/${order._id}`}>
-                                            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
-                                                <Truck className="w-3 h-3 mr-1" /> Add Tracking
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => setLabelOrder(order)}>
+                                                <Printer className="w-3 h-3 mr-1" /> Label
                                             </Button>
-                                        </Link>
+                                            <Link href={`/dashboard/orders/${order._id}`}>
+                                                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                                                    <Truck className="w-3 h-3 mr-1" /> Add Tracking
+                                                </Button>
+                                            </Link>
+                                        </>
                                     )}
                                 </div>
                             </CardContent>
                         </Card>
                     ))}
                 </div>
+            )}
+            
+            {/* Shipping Label Modal */}
+            {labelOrder && vendorProfile && (
+                <ShippingLabel 
+                    order={labelOrder} 
+                    vendor={vendorProfile} 
+                    onClose={() => setLabelOrder(null)} 
+                />
             )}
         </div>
     );

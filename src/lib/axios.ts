@@ -10,6 +10,10 @@ const getApiUrl = (): string => {
     return `${baseUrl}/api/v1`;
 };
 
+export const getBaseUrl = (): string => {
+    return process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? "http://46.225.29.165" : "http://localhost:5001");
+};
+
 const getTokenFromCookie = (): string | null => {
     if (typeof document === 'undefined') return null;
     const match = document.cookie.match(new RegExp('(^| )vendor_token=([^;]+)'));

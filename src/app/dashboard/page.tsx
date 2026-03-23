@@ -14,6 +14,8 @@ import {
     Plus,
     Eye,
     ArrowRight,
+    Percent,
+    TrendingUp,
 } from "lucide-react";
 
 interface Stats {
@@ -23,7 +25,11 @@ interface Stats {
     shippedOrders: number;
     deliveredOrders: number;
     totalRevenue: number;
+    totalCommission: number;
+    netEarnings: number;
     monthlyRevenue: number;
+    monthlyCommission: number;
+    monthlyEarnings: number;
 }
 
 interface Order {
@@ -74,8 +80,8 @@ export default function DashboardPage() {
     const statCards = [
         { label: "Total Products", value: productCount, icon: ShoppingBag, color: "text-blue-600", bg: "bg-blue-50" },
         { label: "Active Orders", value: stats?.pendingOrders || 0, icon: ShoppingCart, color: "text-orange-600", bg: "bg-orange-50" },
-        { label: "Revenue This Month", value: `₹${stats?.monthlyRevenue || 0}`, icon: IndianRupee, color: "text-emerald-600", bg: "bg-emerald-50" },
-        { label: "Total Earnings", value: `₹${stats?.totalRevenue || 0}`, icon: Wallet, color: "text-purple-600", bg: "bg-purple-50" },
+        { label: "This Month Earnings", value: `₹${(stats?.monthlyEarnings || 0).toLocaleString()}`, icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+        { label: "Total Net Earnings", value: `₹${(stats?.netEarnings || 0).toLocaleString()}`, icon: Wallet, color: "text-purple-600", bg: "bg-purple-50" },
     ];
 
     const getStatusColor = (status: string) => {
@@ -114,6 +120,58 @@ export default function DashboardPage() {
                     </Card>
                 ))}
             </div>
+
+            {/* Earnings Breakdown Card */}
+            <Card className="border shadow-sm">
+                <CardContent className="p-4">
+                    <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+                        <IndianRupee className="w-5 h-5 text-[#8D0303]" /> Earnings Summary
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* This Month */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-100">
+                            <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3">This Month</div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Total Sales</span>
+                                    <span className="font-bold">₹{(stats?.monthlyRevenue || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                        <Percent className="w-3 h-3" /> Platform Fee
+                                    </span>
+                                    <span className="font-semibold text-red-600">- ₹{(stats?.monthlyCommission || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="border-t border-emerald-200 pt-2 flex justify-between items-center">
+                                    <span className="text-sm font-semibold">Your Earnings</span>
+                                    <span className="font-black text-xl text-emerald-600">₹{(stats?.monthlyEarnings || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* All Time */}
+                        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100">
+                            <div className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-3">All Time</div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Total Sales</span>
+                                    <span className="font-bold">₹{(stats?.totalRevenue || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                        <Percent className="w-3 h-3" /> Platform Fee
+                                    </span>
+                                    <span className="font-semibold text-red-600">- ₹{(stats?.totalCommission || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="border-t border-purple-200 pt-2 flex justify-between items-center">
+                                    <span className="text-sm font-semibold">Net Earnings</span>
+                                    <span className="font-black text-xl text-purple-600">₹{(stats?.netEarnings || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="flex gap-3">
                 <Link href="/dashboard/products/new">

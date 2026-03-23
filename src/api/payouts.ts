@@ -1,6 +1,7 @@
 import api from "@/lib/axios";
 
 export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'paid';
 
 export interface Payout {
     _id: string;
@@ -31,6 +32,22 @@ export interface Payout {
     updatedAt: string;
 }
 
+export interface WithdrawalRequest {
+    _id: string;
+    amount: number;
+    status: WithdrawalStatus;
+    bankDetails: {
+        accountHolderName: string;
+        accountNumber: string;
+        bankName: string;
+        ifscCode: string;
+    };
+    requestedAt: string;
+    processedAt?: string;
+    transactionRef?: string;
+    remarks?: string;
+}
+
 export interface PayoutSummary {
     totalEarnings: number;
     totalPaid: number;
@@ -42,6 +59,16 @@ export interface PayoutSummary {
 
 export interface PayoutsResponse {
     payouts: Payout[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
+    };
+}
+
+export interface WithdrawalsResponse {
+    withdrawals: WithdrawalRequest[];
     pagination: {
         total: number;
         page: number;
@@ -63,6 +90,22 @@ export const payoutsApi = {
 
     getSummary: async () => {
         const response = await api.get<PayoutSummary>('vendor/payouts/summary');
+        return response.data;
+    },
+
+    // Withdrawal functions
+    requestWithdrawal: async (amount: number) => {
+        const response = await api.post<{ status: string; withdrawal: WithdrawalRequest; message: string }>('vendor/payouts/withdraw', { amount });
+        return response.data;
+    },
+
+    getWithdrawals: async (params?: { status?: string; page?: number; limit?: number }) => {
+        const response = await api.get<WithdrawalsResponse>('vendor/payouts/withdrawals', { params });
+        return response.data;
+    },
+
+    cancelWithdrawal: async (id: string) => {
+        const response = await api.delete<{ status: string; message: string }>(`vendor/payouts/withdrawals/${id}`);
         return response.data;
     },
 };

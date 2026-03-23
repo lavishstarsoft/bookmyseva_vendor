@@ -7,6 +7,7 @@ import {
     LayoutDashboard,
     ClipboardList,
     Wallet,
+    Bell,
     UserCircle,
     LogOut,
     Menu,
@@ -43,6 +44,12 @@ const routes = [
         icon: Wallet,
         href: "/dashboard/payouts",
         color: "text-violet-500",
+    },
+    {
+        label: "Notifications",
+        icon: Bell,
+        href: "/dashboard/notifications",
+        color: "text-rose-500",
     },
     {
         label: "Profile",

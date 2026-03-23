@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { SidebarProvider, useSidebar } from "@/components/dashboard/sidebar-context";
+import { NotificationProvider } from "@/providers/notification-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import api from "@/lib/axios";
@@ -16,9 +17,11 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <SidebarProvider>
-            <DashboardLayoutContent>{children}</DashboardLayoutContent>
-        </SidebarProvider>
+        <NotificationProvider>
+            <SidebarProvider>
+                <DashboardLayoutContent>{children}</DashboardLayoutContent>
+            </SidebarProvider>
+        </NotificationProvider>
     );
 }
 
