@@ -48,6 +48,14 @@ interface WithdrawalRequest {
     processedAt?: string;
     transactionRef?: string;
     remarks?: string;
+    taxBreakdown?: {
+        tdsRate: number;
+        tdsAmount: number;
+        gstRate: number;
+        gstAmount: number;
+        grossAmount: number;
+        netPayableAmount: number;
+    };
 }
 
 export default function PayoutsPage() {
