@@ -23,8 +23,9 @@ import { vendorPrasadamsApi, VendorPrasadam } from "@/api/prasadams";
 import { toast } from "sonner";
 
 type TabType = "all" | "approved" | "pending" | "rejected";
+type ItemStatus = Exclude<TabType, "all">;
 
-function getStatus(prasadam: VendorPrasadam): TabType {
+function getStatus(prasadam: VendorPrasadam): ItemStatus {
     if (prasadam.vendorApproved) return "approved";
     if (prasadam.rejectionReason) return "rejected";
     return "pending";
