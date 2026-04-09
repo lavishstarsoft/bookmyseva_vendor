@@ -63,6 +63,7 @@ interface OrderDetails {
     updatedAt: string;
     trackingId?: string;
     courierName?: string;
+    courierWebsite?: string;
     commission?: {
         type: string;
         value: number;
@@ -268,6 +269,16 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ orderId
                                             <span className="ml-2 font-medium font-mono">{order.trackingId || 'N/A'}</span>
                                         </div>
                                     </div>
+                                    {order.courierWebsite && order.trackingId && (
+                                        <a
+                                            href={/^https?:\/\//i.test(order.courierWebsite) ? order.courierWebsite : `https://${order.courierWebsite}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 text-blue-600 hover:underline mt-2 text-xs"
+                                        >
+                                            Check Tracking
+                                        </a>
+                                    )}
                                 </div>
                             ) : null}
                         </CardContent>
@@ -418,8 +429,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ orderId
                                         onClick={() => {
                                             const courier = prompt("Enter Courier Name:");
                                             const tracking = prompt("Enter Tracking ID:");
+                                            const website = prompt("Enter Courier Tracking Website URL (optional):") || "";
                                             if (courier && tracking) {
-                                                handleAction('ship', { courierName: courier, trackingId: tracking });
+                                                handleAction('ship', { courierName: courier, trackingId: tracking, courierWebsite: website });
                                             }
                                         }}
                                         disabled={actionLoading}

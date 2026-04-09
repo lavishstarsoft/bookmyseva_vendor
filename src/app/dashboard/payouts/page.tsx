@@ -60,6 +60,7 @@ export default function PayoutsPage() {
     const [withdrawing, setWithdrawing] = useState(false);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("earnings");
+    const [statementLoadingId, setStatementLoadingId] = useState<string | null>(null);
     const router = useRouter();
 
     const fetchData = useCallback(async () => {
@@ -135,6 +136,40 @@ export default function PayoutsPage() {
             toast.error(err.response?.data?.message || "Failed to cancel withdrawal");
         } finally {
             setCancellingId(null);
+        }
+    };
+
+    const handleViewStatement = async (id: string) => {
+        setStatementLoadingId(id);
+        try {
+            const res = await api.get(`/vendor/payouts/withdrawals/${id}/statement`);
+            const s = res.data?.statement;
+            if (!s) {
+                toast.error("Statement not found");
+                return;
+            }
+            const text = [
+                `Statement ID: ${s.statementId}`,
+                `Withdrawal ID: ${s.withdrawalId}`,
+                `Requested Amount: ₹${s.amountRequested}`,
+                `TDS (${s.taxBreakdown?.tdsRate || 0}%): ₹${s.taxBreakdown?.tdsAmount || 0}`,
+                `GST (${s.taxBreakdown?.gstRate || 0}%): ₹${s.taxBreakdown?.gstAmount || 0}`,
+                `Net Payable: ₹${s.netPayableAmount}`,
+                `Status: ${s.status}`,
+                `Transaction Ref: ${s.transactionRef || "-"}`,
+            ].join("\n");
+            const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${s.statementId || "payout-statement"}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success("Statement downloaded");
+        } catch {
+            toast.error("Failed to fetch statement");
+        } finally {
+            setStatementLoadingId(null);
         }
     };
 
@@ -336,6 +371,11 @@ export default function PayoutsPage() {
                                                             {getStatusIcon(withdrawal.status)}
                                                             {withdrawal.status}
                                                         </span>
+                                                        {withdrawal.taxBreakdown && (
+                                                            <div className="text-[10px] mt-1 text-muted-foreground">
+                                                                Net Payable: ₹{withdrawal.taxBreakdown.netPayableAmount}
+                                                            </div>
+                                                        )}
                                                         {withdrawal.transactionRef && (
                                                             <div className="text-[10px] text-muted-foreground mt-1">
                                                                 Ref: {withdrawal.transactionRef}
@@ -350,24 +390,37 @@ export default function PayoutsPage() {
                                                         {withdrawal.remarks || "—"}
                                                     </td>
                                                     <td className="p-3">
-                                                        {withdrawal.status === 'pending' && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleCancelWithdrawal(withdrawal._id)}
-                                                                disabled={cancellingId === withdrawal._id}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                            >
-                                                                {cancellingId === withdrawal._id ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <>
-                                                                        <X className="w-4 h-4 mr-1" />
-                                                                        Cancel
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            {withdrawal.status === 'pending' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleCancelWithdrawal(withdrawal._id)}
+                                                                    disabled={cancellingId === withdrawal._id}
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    {cancellingId === withdrawal._id ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        <>
+                                                                            <X className="w-4 h-4 mr-1" />
+                                                                            Cancel
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                            {(withdrawal.status === 'approved' || withdrawal.status === 'paid') && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleViewStatement(withdrawal._id)}
+                                                                    disabled={statementLoadingId === withdrawal._id}
+                                                                >
+                                                                    {statementLoadingId === withdrawal._id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                                                                    Statement
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}

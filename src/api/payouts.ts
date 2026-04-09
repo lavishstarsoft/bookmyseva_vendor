@@ -46,6 +46,25 @@ export interface WithdrawalRequest {
     processedAt?: string;
     transactionRef?: string;
     remarks?: string;
+    taxBreakdown?: {
+        tdsRate: number;
+        tdsAmount: number;
+        gstRate: number;
+        gstAmount: number;
+        grossAmount: number;
+        netPayableAmount: number;
+    };
+    statement?: {
+        statementId: string;
+        generatedAt?: string;
+        sentAt?: string;
+    };
+    auditTrail?: Array<{
+        action: string;
+        actorRole?: string;
+        actorName?: string;
+        createdAt: string;
+    }>;
 }
 
 export interface PayoutSummary {
@@ -106,6 +125,11 @@ export const payoutsApi = {
 
     cancelWithdrawal: async (id: string) => {
         const response = await api.delete<{ status: string; message: string }>(`vendor/payouts/withdrawals/${id}`);
+        return response.data;
+    },
+
+    getWithdrawalStatement: async (id: string) => {
+        const response = await api.get<{ status: string; statement: any }>(`vendor/payouts/withdrawals/${id}/statement`);
         return response.data;
     },
 };

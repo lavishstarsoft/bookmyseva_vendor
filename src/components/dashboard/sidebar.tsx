@@ -14,6 +14,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Package,
+    Cookie,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -32,6 +33,12 @@ const routes = [
         icon: Package,
         href: "/dashboard/kits",
         color: "text-amber-500",
+    },
+    {
+        label: "Prasadams",
+        icon: Cookie,
+        href: "/dashboard/prasadams",
+        color: "text-orange-500",
     },
     {
         label: "Orders",
