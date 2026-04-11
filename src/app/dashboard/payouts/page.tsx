@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import api from "@/lib/axios";
-import { Loader2, Wallet, IndianRupee, Clock, ArrowUpRight, X, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, Wallet, IndianRupee, Clock, ArrowUpRight, X, CheckCircle, XCircle, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 interface Summary {
@@ -20,6 +21,7 @@ interface Summary {
     withdrawnAmount: number;
     pendingWithdrawalAmount: number;
     availableForWithdrawal: number;
+    bankDetailsSet: boolean;
 }
 
 interface Payout {
@@ -69,6 +71,7 @@ export default function PayoutsPage() {
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("earnings");
     const [statementLoadingId, setStatementLoadingId] = useState<string | null>(null);
+    const [bankWarningOpen, setBankWarningOpen] = useState(false);
     const router = useRouter();
 
     const fetchData = useCallback(async () => {
@@ -119,12 +122,8 @@ export default function PayoutsPage() {
             const errorMsg = err.response?.data?.message || "Failed to submit withdrawal request";
             
             if (errorMsg.includes("bank details")) {
-                toast.error(errorMsg, {
-                    action: {
-                        label: "Add Bank Details",
-                        onClick: () => router.push("/dashboard/profile")
-                    }
-                });
+                setWithdrawModalOpen(false);
+                setBankWarningOpen(true);
             } else {
                 toast.error(errorMsg);
             }
@@ -218,7 +217,13 @@ export default function PayoutsPage() {
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-bold">Payouts & Earnings</h1>
                     <Button
-                        onClick={() => setWithdrawModalOpen(true)}
+                        onClick={() => {
+                            if (summary && !summary.bankDetailsSet) {
+                                setBankWarningOpen(true);
+                            } else {
+                                setWithdrawModalOpen(true);
+                            }
+                        }}
                         className="bg-[#8D0303] hover:bg-[#6D0202] text-white"
                         disabled={!summary || summary.availableForWithdrawal < 100}
                     >
@@ -501,6 +506,35 @@ export default function PayoutsPage() {
                     </div>
                 </div>
             )}
+            {/* Bank Warning Modal */}
+            <Dialog open={bankWarningOpen} onOpenChange={setBankWarningOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader className="flex flex-col items-center pt-6">
+                        <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+                            <ShieldAlert className="w-10 h-10 text-[#8D0303]" />
+                        </div>
+                        <DialogTitle className="text-xl font-bold text-center">Bank Details Required</DialogTitle>
+                        <DialogDescription className="text-center pt-2 text-base">
+                            You haven't added your bank details yet. We need this information to process your withdrawal requests and send your earnings to your bank account.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex-col sm:flex-col gap-2 pt-4">
+                        <Button 
+                            className="w-full bg-[#8D0303] hover:bg-[#6d0202] text-white h-12 text-base font-bold"
+                            onClick={() => router.push("/dashboard/profile")}
+                        >
+                            Add Bank Details Now
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            className="w-full h-11 text-muted-foreground"
+                            onClick={() => setBankWarningOpen(false)}
+                        >
+                            Maybe Later
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
