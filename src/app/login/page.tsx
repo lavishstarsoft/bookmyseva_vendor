@@ -24,7 +24,7 @@ export default function VendorLoginPage() {
     const router = useRouter();
     const [step, setStep] = useState<Step>("mobile");
     const [mobile, setMobile] = useState("");
-    const [otp, setOtp] = useState(["", "", "", ""]);
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [loading, setLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -74,7 +74,7 @@ export default function VendorLoginPage() {
         setOtp(newOtp);
 
         // Auto-focus next input
-        if (value && index < 3) {
+        if (value && index < 5) {
             otpRefs.current[index + 1]?.focus();
         }
     };
@@ -90,18 +90,18 @@ export default function VendorLoginPage() {
 
     const handleOtpPaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
-        const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
-        if (pasted.length === 4) {
+        const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+        if (pasted.length === 6) {
             const newOtp = pasted.split("");
             setOtp(newOtp);
-            otpRefs.current[3]?.focus();
+            otpRefs.current[5]?.focus();
         }
     };
 
     const handleVerifyOtp = async () => {
         const otpValue = otp.join("");
-        if (otpValue.length !== 4) {
-            toast.error("Please enter the complete 4-digit OTP");
+        if (otpValue.length !== 6) {
+            toast.error("Please enter the complete 6-digit OTP");
             return;
         }
 
@@ -150,7 +150,7 @@ export default function VendorLoginPage() {
                 isSignup: false,
             });
             setResendTimer(30);
-            setOtp(["", "", "", ""]);
+            setOtp(["", "", "", "", "", ""]);
             toast.success("OTP resent successfully");
         } catch (error: any) {
             const message =
@@ -180,7 +180,7 @@ export default function VendorLoginPage() {
                     <CardDescription>
                         {step === "mobile"
                             ? "Enter your registered mobile number to receive an OTP"
-                            : `Enter the 4-digit OTP sent to +91 ${mobile}`}
+                            : `Enter the 6-digit OTP sent to +91 ${mobile}`}
                     </CardDescription>
                 </CardHeader>
 
@@ -279,7 +279,7 @@ export default function VendorLoginPage() {
                                 variant="secondary"
                                 className="w-full"
                                 size="lg"
-                                disabled={loading || otp.join("").length !== 4}
+                                disabled={loading || otp.join("").length !== 6}
                             >
                                 {loading ? (
                                     <>
@@ -296,7 +296,7 @@ export default function VendorLoginPage() {
                                     type="button"
                                     onClick={() => {
                                         setStep("mobile");
-                                        setOtp(["", "", "", ""]);
+                                        setOtp(["", "", "", "", "", ""]);
                                     }}
                                     className="text-muted-foreground hover:text-foreground transition-colors"
                                 >

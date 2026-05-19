@@ -34,7 +34,7 @@ export default function VendorRegisterPage() {
     const router = useRouter();
     const [step, setStep] = useState<Step>(1);
     const [mobile, setMobile] = useState("");
-    const [otp, setOtp] = useState(["", "", "", ""]);
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [otpSent, setOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
@@ -113,7 +113,7 @@ export default function VendorRegisterPage() {
         newOtp[index] = value;
         setOtp(newOtp);
 
-        if (value && index < 3) {
+        if (value && index < 5) {
             otpRefs.current[index + 1]?.focus();
         }
     };
@@ -126,17 +126,17 @@ export default function VendorRegisterPage() {
 
     const handleOtpPaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
-        const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
-        if (pasted.length === 4) {
+        const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+        if (pasted.length === 6) {
             setOtp(pasted.split(""));
-            otpRefs.current[3]?.focus();
+            otpRefs.current[5]?.focus();
         }
     };
 
     const handleVerifyAndContinue = () => {
         const otpValue = otp.join("");
-        if (otpValue.length !== 4) {
-            toast.error("Please enter the complete 4-digit OTP");
+        if (otpValue.length !== 6) {
+            toast.error("Please enter the complete 6-digit OTP");
             return;
         }
         setStep(2);
@@ -151,7 +151,7 @@ export default function VendorRegisterPage() {
                 isSignup: true,
             });
             setResendTimer(30);
-            setOtp(["", "", "", ""]);
+            setOtp(["", "", "", "", "", ""]);
             toast.success("OTP resent successfully");
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to resend OTP");
@@ -320,7 +320,7 @@ export default function VendorRegisterPage() {
                     <CardDescription>
                         {step === 1
                             ? otpSent
-                                ? `Enter the 4-digit OTP sent to +91 ${mobile}`
+                                ? `Enter the 6-digit OTP sent to +91 ${mobile}`
                                 : "Register as a vendor on BookMySeva"
                             : "Fill in the details to complete your registration"}
                     </CardDescription>
@@ -382,11 +382,11 @@ export default function VendorRegisterPage() {
                                     ))}
                                 </div>
                             </div>
-                            <Button type="submit" variant="secondary" className="w-full" size="lg" disabled={otp.join("").length !== 4}>
+                            <Button type="submit" variant="secondary" className="w-full" size="lg" disabled={otp.join("").length !== 6}>
                                 Continue
                             </Button>
                             <div className="flex items-center justify-between text-sm">
-                                <button type="button" onClick={() => { setOtpSent(false); setOtp(["", "", "", ""]); }} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <button type="button" onClick={() => { setOtpSent(false); setOtp(["", "", "", "", "", ""]); }} className="text-muted-foreground hover:text-foreground transition-colors">
                                     Change number
                                 </button>
                                 <button type="button" onClick={handleResendOtp} disabled={resendTimer > 0 || loading} className="text-secondary hover:text-secondary/80 disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors">
