@@ -174,11 +174,6 @@ export default function DashboardPage() {
             </Card>
 
             <div className="flex gap-3">
-                <Link href="/dashboard/products/new">
-                    <Button size="sm" className="bg-[#8D0303] hover:bg-[#700202] text-white">
-                        <Plus className="w-4 h-4 mr-1.5" /> Add Product
-                    </Button>
-                </Link>
                 <Link href="/dashboard/orders">
                     <Button size="sm" variant="outline">
                         <Eye className="w-4 h-4 mr-1.5" /> View Orders
