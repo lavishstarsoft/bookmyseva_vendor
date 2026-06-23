@@ -83,6 +83,7 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
     });
     const [commissionType, setCommissionType] = useState("percentage");
     const [commissionValue, setCommissionValue] = useState(0);
+    const [taxes, setTaxes] = useState<{ id?: string; name: string; percentage: number; registrationNumber?: string }[]>([]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -138,6 +139,7 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
                     leadDays: item.deliveryConfig?.leadDays ?? 1,
                     maxAdvanceDays: item.deliveryConfig?.maxAdvanceDays ?? 7,
                 });
+                setTaxes(item.taxes || []);
                 setWasApproved(!!item.vendorApproved);
             } catch {
                 toast.error("Failed to load prasadam");
@@ -240,6 +242,22 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
         }));
     };
 
+    const addTax = () => {
+        setTaxes([...taxes, { id: Date.now().toString(), name: '', percentage: 0, registrationNumber: '' }]);
+    };
+
+    const updateTax = (index: number, field: string, value: any) => {
+        const updated = [...taxes];
+        (updated[index] as any)[field] = value;
+        setTaxes(updated);
+    };
+
+    const removeTax = (index: number) => {
+        const updated = [...taxes];
+        updated.splice(index, 1);
+        setTaxes(updated);
+    };
+
     const handleSave = async () => {
         if (!title.trim()) return toast.error("Please enter prasadam title");
         if (!category) return toast.error("Please select a category");
@@ -286,6 +304,7 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
                 maxAdvanceDays: Number(deliveryConfig.maxAdvanceDays) || 7,
                 availableDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
             },
+            taxes: taxes,
         };
 
         try {
@@ -406,17 +425,54 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
                         </div>
                         <div className="flex items-center justify-between"><Label>In Stock</Label><Switch checked={inStock} onCheckedChange={setInStock} /></div>
                         <div className="flex items-center justify-between"><Label>Free Shipping</Label><Switch checked={freeShipping} onCheckedChange={setFreeShipping} /></div>
-                        {!freeShipping && (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><Label>Free Above</Label><Input type="number" value={freeShippingAbove} onChange={(e) => setFreeShippingAbove(e.target.value)} /></div>
-                                <div><Label>Shipping Charge</Label><Input type="number" value={shippingCharge} onChange={(e) => setShippingCharge(e.target.value)} /></div>
+                                {!freeShipping && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div><Label>Free Above</Label><Input type="number" value={freeShippingAbove} onChange={(e) => setFreeShippingAbove(e.target.value)} /></div>
+                                        <div><Label>Shipping Charge</Label><Input type="number" value={shippingCharge} onChange={(e) => setShippingCharge(e.target.value)} /></div>
+                                    </div>
+                                )}
+                                <div><Label>Delivery Text</Label><Input value={deliveryText} onChange={(e) => setDeliveryText(e.target.value)} /></div>
+                            <div className="mt-4 space-y-2">
+                                <div className="flex items-center justify-between mb-1">
+                                    <Label>Taxes & Fees Configuration</Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addTax} className="h-8">
+                                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Tax/Fee
+                                    </Button>
+                                </div>
+                                <div className="space-y-3">
+                                    {taxes.length === 0 ? (
+                                        <div className="text-sm text-gray-500 italic p-4 border rounded-xl bg-gray-50 text-center">No taxes configured. (0% will be applied)</div>
+                                    ) : (
+                                        taxes.map((tax, idx) => (
+                                            <div key={idx} className="flex gap-4 items-start p-4 border rounded-xl bg-white relative group">
+                                                <div className="flex-1 space-y-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tax Name</label>
+                                                            <Input placeholder="e.g., GST, VAT" value={tax.name} onChange={(e) => updateTax(idx, "name", e.target.value)} className="h-9" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Percentage (%)</label>
+                                                            <Input type="number" value={tax.percentage} onChange={(e) => updateTax(idx, "percentage", Number(e.target.value))} className="h-9" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Reg. Number (Optional)</label>
+                                                            <Input placeholder="e.g., GSTIN..." value={tax.registrationNumber} onChange={(e) => updateTax(idx, "registrationNumber", e.target.value)} className="h-9 uppercase" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => removeTax(idx)} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" type="button">
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        <div><Label>Delivery Text</Label><Input value={deliveryText} onChange={(e) => setDeliveryText(e.target.value)} /></div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
 
-                <Card>
+                    <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <CalendarDays className="w-5 h-5" /> Delivery Schedule

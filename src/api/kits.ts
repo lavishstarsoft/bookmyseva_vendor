@@ -59,6 +59,12 @@ export interface Kit {
     badges?: KitBadges;
     shipping?: KitShipping;
     deliveryConfig?: KitDeliveryConfig;
+    taxes?: {
+        id?: string;
+        name: string;
+        percentage: number;
+        registrationNumber?: string;
+    }[];
     vendorApproved?: boolean;
     source?: string;
     commissionType?: string;

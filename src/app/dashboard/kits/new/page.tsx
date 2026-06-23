@@ -56,6 +56,7 @@ export default function AddKitPage() {
     const [newItem, setNewItem] = useState("");
     const [commissionType, setCommissionType] = useState("percentage");
     const [commissionValue, setCommissionValue] = useState(0);
+    const [taxes, setTaxes] = useState<{ id: string; name: string; percentage: number; registrationNumber: string }[]>([]);
 
     useEffect(() => {
         const fetchCommission = async () => {
@@ -130,6 +131,22 @@ export default function AddKitPage() {
         setItems(items.filter(item => item.id !== id));
     };
 
+    const addTax = () => {
+        setTaxes([...taxes, { id: Date.now().toString(), name: '', percentage: 0, registrationNumber: '' }]);
+    };
+
+    const updateTax = (index: number, field: string, value: any) => {
+        const updated = [...taxes];
+        (updated[index] as any)[field] = value;
+        setTaxes(updated);
+    };
+
+    const removeTax = (index: number) => {
+        const updated = [...taxes];
+        updated.splice(index, 1);
+        setTaxes(updated);
+    };
+
     const addPlan = (label: string, badge: string) => {
         const planId = label.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
         setPricingPlans([...pricingPlans, { id: planId, label, price: "", active: true, badge }]);
@@ -167,7 +184,8 @@ export default function AddKitPage() {
                 defaultRating: 4.8,
                 reviewCount: 0,
                 image: images[0],
-                images: images
+                images: images,
+                taxes: taxes
             };
 
             if (pricingPlans.length > 0) {
@@ -322,6 +340,43 @@ export default function AddKitPage() {
                                     <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{shortDescription.length} / 300</span>
                                 </div>
                                 <Textarea placeholder="Briefly describe what this kit is for..." rows={4} maxLength={300} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="resize-none border-gray-200 focus:border-[#8D0303] focus:ring-[#8D0303]/20" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="text-sm font-semibold text-gray-700">Taxes & Fees Configuration</label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addTax} className="h-8">
+                                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Tax/Fee
+                                    </Button>
+                                </div>
+                                <div className="space-y-3">
+                                    {taxes.length === 0 ? (
+                                        <div className="text-sm text-gray-500 italic p-4 border rounded-xl bg-gray-50 text-center">No taxes configured. (0% will be applied)</div>
+                                    ) : (
+                                        taxes.map((tax, idx) => (
+                                            <div key={idx} className="flex gap-4 items-start p-4 border rounded-xl bg-white relative group">
+                                                <div className="flex-1 space-y-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tax Name</label>
+                                                            <Input placeholder="e.g., GST, VAT" value={tax.name} onChange={(e) => updateTax(idx, "name", e.target.value)} className="h-9" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Percentage (%)</label>
+                                                            <Input type="number" value={tax.percentage} onChange={(e) => updateTax(idx, "percentage", Number(e.target.value))} className="h-9" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Reg. Number (Optional)</label>
+                                                            <Input placeholder="e.g., GSTIN..." value={tax.registrationNumber} onChange={(e) => updateTax(idx, "registrationNumber", e.target.value)} className="h-9 uppercase" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => removeTax(idx)} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" type="button">
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

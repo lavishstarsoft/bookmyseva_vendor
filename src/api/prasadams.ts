@@ -50,6 +50,12 @@ export interface VendorPrasadam {
         maxAdvanceDays?: number;
         availableDays?: string[];
     };
+    taxes?: {
+        id?: string;
+        name: string;
+        percentage: number;
+        registrationNumber?: string;
+    }[];
     vendorApproved?: boolean;
     rejectionReason?: string;
     createdAt?: string;
