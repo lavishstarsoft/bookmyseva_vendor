@@ -379,7 +379,7 @@ export default function EditVendorPrasadamPage({ params }: { params: Promise<{ i
                         </div>
                         <div><Label>Short Description</Label><Textarea rows={2} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} /></div>
                         <div><Label>Full Description</Label><Textarea rows={4} value={fullDescription} onChange={(e) => setFullDescription(e.target.value)} /></div>
-                        <div><Label>Images *</Label><MultiImageUpload values={images} onChange={setImages} maxImages={5} /></div>
+                        <div><Label>Images *</Label><MultiImageUpload values={images} onChange={setImages} maxImages={5} aspectRatio={1} /></div>
                     </CardContent>
                 </Card>
 
